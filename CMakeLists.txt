@@ -15,17 +15,19 @@ project(COMP426)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
+hunter_add_package(glfw)
+find_package(glfw3 CONFIG REQUIRED)
+
+hunter_add_package(glm)
+find_package(glm REQUIRED)
+
+
 #------------------------------------------------------------------------------
 # Other dependencies
 #------------------------------------------------------------------------------
 
 find_package(OpenGL REQUIRED)
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glew/include")
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glut/include")
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glew/bin/Release/Win32/glew32.dll ${CMAKE_CURRENT_BINARY_DIR}/glew32.dll COPYONLY)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glut/bin/freeglut.dll ${CMAKE_CURRENT_BINARY_DIR}/freeglut.dll COPYONLY)
 
 #------------------------------------------------------------------------------
 # Main files
@@ -36,7 +38,7 @@ set(SRCS
 )
 
 set(HEADERS
-		src/MathUtils.hpp src/GLUtils.hpp)
+		src/GLUtils.hpp src/BallUtils.hpp)
 
 
 #------------------------------------------------------------------------------
@@ -45,7 +47,7 @@ set(HEADERS
 
 add_executable(${PROJECT_NAME} ${SRCS} ${HEADERS})
 target_link_libraries(${PROJECT_NAME}
-	${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glew/lib/Release/Win32/glew32.lib
-	${CMAKE_CURRENT_SOURCE_DIR}/Dependencies/glut/lib/freeglut.lib
+	glfw
+	glm
 )
 
