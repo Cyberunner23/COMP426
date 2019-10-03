@@ -7,7 +7,7 @@
 #include "glm/glm.hpp"
 
 
-const unsigned int WinSize = 800;
+const unsigned int WinSize = 1000;
 const double pi = 3.1415926535897;
 
 float LinearInterpolation(float destMin, float destMax, float srcMin, float srcMax, float srcVal);
