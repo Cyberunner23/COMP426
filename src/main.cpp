@@ -80,16 +80,33 @@ void handle_wall_collisions(std::vector<BallState>& balls)
     }
 }
 
-glm::vec2 compute_elastic_collision(glm::vec2 x1, glm::vec2 x2, glm::vec2 v1, glm::vec2 v2, float m1, float m2)
+/*glm::vec2 compute_elastic_collision(glm::vec2 x1, glm::vec2 x2, glm::vec2 v1, glm::vec2 v2, float m1, float m2)
 {
-    std::cout << "m1: " << m1 << " m2: " << m2 << std::endl;
-    return v1 - /*((2 * m2) / (m1 + m2)) **/ glm::dot((v1 - v2), (x1 - x2)) * (x1 - x2);
-}
+    //std::cout << "m1: " << m1 << " m2: " << m2 << std::endl;
+    //return v1 - ((2 * m2) / (m1 + m2)) * glm::dot((v1 - v2), (x1 - x2)) * (x1 - x2) / std::pow(glm::length(x2 - x1), 2);
+
+
+}*/
 
 void handle_ball_ball_collision(BallState& b1, BallState& b2)
 {
-    b1.Velocity = compute_elastic_collision(b1.Position, b2.Position, b1.Velocity, b2.Velocity, b1.Mass, b2.Mass);
-    b2.Velocity = compute_elastic_collision(b2.Position, b1.Position, b2.Velocity, b1.Velocity, b2.Mass, b1.Mass);
+    //b1.Velocity = compute_elastic_collision(b1.Position, b2.Position, b1.Velocity, b2.Velocity, b1.Mass, b2.Mass);
+    //b2.Velocity = compute_elastic_collision(b2.Position, b1.Position, b2.Velocity, b1.Velocity, b2.Mass, b1.Mass);
+    /*glm::vec2 collision = b1.Position - b2.Position;
+    double distance = glm::length(collision);
+    collision /= distance;
+    double aci = glm::dot(b1.Position, collision);
+    double bci = glm::dot(b2.Position, collision);
+
+    double acf = bci;
+    double bcf = aci;
+
+    b1.Velocity.x += collision.x * (acf - aci);
+    b1.Velocity.y += collision.y * (acf - aci);
+    b2.Velocity.x += collision.x * (bcf - bci);
+    b2.Velocity.y += collision.y * (bcf - bci);*/
+    b1.Velocity.x = -b1.Velocity.x;
+    b2.Velocity.y = -b2.Velocity.y;
 }
 
 void handle_ball_ball_collisions(std::vector<BallState>& balls)

@@ -54,8 +54,8 @@ BallState create_random_ball()
     int posX = rand_range(radius, WinSize - radius);
     int posY = rand_range(radius, WinSize - radius);
 
-    int velX = rand_range(50, 100);
-    int velY = rand_range(50, 100);
+    int velX = rand_range(50, 75);
+    int velY = rand_range(50, 75);
     velX = (int) rand_range(0, 1) ? velX : -velX;
     velY = (int) rand_range(0, 1) ? velY : -velY;
 
