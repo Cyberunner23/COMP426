@@ -1,0 +1,6 @@
+The wai I designed this is with a main thread and a computation thread per ball.
+
+The main thread does the update logic, which consists of starting the threads for the ball updates, collision resolution and rendering.
+The computation threads does the ball update, which consists of computing the position for the next frame.
+
+I optimized by having the motion computations in the threads.
