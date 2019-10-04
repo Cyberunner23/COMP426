@@ -72,61 +72,80 @@ void handle_wall_collision(BallState& ball)
     }
 }
 
-void handle_wall_collisions(std::vector<BallState>& balls)
-{
-    for (BallState& ball : balls)
-    {
-        handle_wall_collision(ball);
-    }
-}
-
-/*glm::vec2 compute_elastic_collision(glm::vec2 x1, glm::vec2 x2, glm::vec2 v1, glm::vec2 v2, float m1, float m2)
-{
-    //std::cout << "m1: " << m1 << " m2: " << m2 << std::endl;
-    //return v1 - ((2 * m2) / (m1 + m2)) * glm::dot((v1 - v2), (x1 - x2)) * (x1 - x2) / std::pow(glm::length(x2 - x1), 2);
-
-
-}*/
-
 void handle_ball_ball_collision(BallState& b1, BallState& b2)
 {
-    //b1.Velocity = compute_elastic_collision(b1.Position, b2.Position, b1.Velocity, b2.Velocity, b1.Mass, b2.Mass);
-    //b2.Velocity = compute_elastic_collision(b2.Position, b1.Position, b2.Velocity, b1.Velocity, b2.Mass, b1.Mass);
-    /*glm::vec2 collision = b1.Position - b2.Position;
-    double distance = glm::length(collision);
-    collision /= distance;
-    double aci = glm::dot(b1.Position, collision);
-    double bci = glm::dot(b2.Position, collision);
 
-    double acf = bci;
-    double bcf = aci;
+    glm::vec2 delta = b1.Position - b2.Position;
+    float r = (float)b1.Radius + (float)b2.Radius;
+    float dist2 = glm::dot(delta, delta);
 
-    b1.Velocity.x += collision.x * (acf - aci);
-    b1.Velocity.y += collision.y * (acf - aci);
-    b2.Velocity.x += collision.x * (bcf - bci);
-    b2.Velocity.y += collision.y * (bcf - bci);*/
-    b1.Velocity.x = -b1.Velocity.x;
-    b2.Velocity.y = -b2.Velocity.y;
-}
-
-void handle_ball_ball_collisions(std::vector<BallState>& balls)
-{
-    for (int i = 0; i < balls.size(); ++i)
+    if (dist2 >= r * r)
     {
-        for (int j = i + 1; j < balls.size(); ++j)
-        {
-            if (collides(balls.at(i), balls.at(j)))
-            {
-                handle_ball_ball_collision(balls.at(i), balls.at(j));
-            }
-        }
+        return;
     }
+
+    float d = glm::length(delta);
+
+    glm::vec2 mtd;
+    if (d != 0.0f)
+    {
+        mtd = delta * ((((float)b1.Radius + (float)b2.Radius) - d)/d);
+    }
+    else
+    {
+        d = (float)b1.Radius +  (float)b2.Radius - 1.0f;
+        delta = glm::vec2 {b1.Radius + b2.Radius, 0.0f};
+        mtd = delta * ((((float)b1.Radius + (float)b2.Radius) - d)/d);
+    }
+
+    float im1 = 1 / b1.Mass; // inverse mass quantities
+    float im2 = 1 / b2.Mass;
+
+    b1.Position = b1.Position + (mtd * (im1 / (im1 + im2)));
+    b2.Position = b2.Position - (mtd * (im1 / (im1 + im2)));
+
+    glm::vec2 v = (b1.Velocity - b2.Velocity);
+    float vn = glm::dot(v, glm::normalize(mtd));
+
+    if (vn > 0.0f) return;
+
+    float i = (-(1.0f + 0.85f) * vn) / (im1 + im2);
+    glm::vec2 impulse = mtd * i * 0.001f;
+
+    b1.Velocity = b1.Velocity + (impulse * im1);
+    b2.Velocity = b2.Velocity - (impulse * im2);
 }
+
+
+
+
 
 void handle_collisions(std::vector<BallState>& balls)
 {
-    handle_wall_collisions(balls);
-    handle_ball_ball_collisions(balls);
+    for (int i = 0; i < balls.size(); ++i)
+    {
+        handle_wall_collision(balls[i]);
+
+        for(int j = i + 1; j < balls.size(); j++)
+        {
+            /*if ((balls[i].Position.x + balls[i].Radius) < (balls[j].Position.x - balls[j].Radius))
+            {
+                std::cout << "break" << std::endl;
+                break;
+            }*/
+
+
+            /*if((balls[i].Position.y + balls[i].Radius) < (balls[j].Position.y - balls[j].Radius) ||
+               (balls[j].Position.y + balls[j].Radius) < (balls[i].Position.y - balls[i].Radius))
+            {
+                std::cout << "continue" << std::endl;
+                continue;
+            }*/
+
+
+            handle_ball_ball_collision(balls[i], balls[j]);
+        }
+    }
 }
 
 void update_balls(std::vector<BallState>& balls, double deltaT)
