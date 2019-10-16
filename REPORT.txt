@@ -1,8 +1,31 @@
 Alex Frappier Lachapelle 40019133
 
-The way I designed this is with a main thread and a computation thread per ball.
 
-The main thread does the update logic, which consists of starting the threads for the ball updates, collision resolution and rendering.
-The computation threads does the ball update, which consists of computing the position for the next frame.
+This project uses GLFW instead of GLUT as the library since I am more comfortable with it.
 
-I optimized by having the motion computations in the threads.
+The main thread starts by creating the window. It then initializes a certain amount of balls defined by the command like argument.
+The balls are created with random position, velocity, mass and color.
+When the ball is created, there is a check to see if it collides with any other ball, if it is the case, a new random ball is generated until no collision is detected.
+
+The main thread then goes into the main loop.
+It starts by doing frame limiting that is done by comparing the frame start times between the current frame and the previous frame.
+The main thread then sleep until the total frame time elapsed is 1/30 of a second.
+
+The main thread then starts a thread for every ball.
+Each thread runs an update function that updated the ball position based on its current position and its current velocity.
+
+The main thread then does collision handling.
+It uses elastic collision formulas to simulate collisions.
+
+After that it renders the balls based on their position and color.
+
+
+A note on the additional files.
+
+GLUtils.hpp:
+  This file contains utilities I have created for drawing the background and the circle.
+  These functions could have been put in the main file but I put them there for cleanliness.
+
+BallUtils.hpp:
+  This file contains utilities I created for the balls themselves. \
+  It contains the data representing the ball, ball collision detection, ball generation as well as the update function used in the threads.
