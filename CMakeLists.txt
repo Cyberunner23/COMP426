@@ -28,6 +28,8 @@ find_package(glm REQUIRED)
 
 find_package(OpenGL REQUIRED)
 
+add_subdirectory(3rdparty/tbb)
+
 
 #------------------------------------------------------------------------------
 # Main files
@@ -49,5 +51,6 @@ add_executable(${PROJECT_NAME} ${SRCS} ${HEADERS})
 target_link_libraries(${PROJECT_NAME}
 	glfw
 	glm
+	tbb
 )
 

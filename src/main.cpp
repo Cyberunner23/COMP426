@@ -3,6 +3,8 @@
 #include <thread>
 #include <vector>
 
+#include "tbb/tbb.h"
+
 #include "BallUtils.hpp"
 #include "GLUtils.hpp"
 
@@ -118,50 +120,80 @@ void handle_ball_ball_collision(BallState& b1, BallState& b2)
 
 
 
+class TbbBallBallCollision
+{
+private:
+    unsigned int current;
+    std::vector<BallState>* balls;
 
+public:
+    TbbBallBallCollision(unsigned int current, std::vector<BallState>* balls)
+    {
+        this->current = current;
+        this->balls = balls;
+    }
+
+    void operator() (const tbb::blocked_range<size_t>& r) const
+    {
+        for (auto i = r.begin(); i != r.end(); ++i)
+        {
+            handle_ball_ball_collision((*balls)[current], (*balls)[i]);
+        }
+    }
+};
+
+class TbbWallCollision
+{
+private:
+    std::vector<BallState>* balls;
+
+public:
+    TbbWallCollision(std::vector<BallState>* balls)
+    {
+        this->balls = balls;
+    }
+
+    void operator() (const tbb::blocked_range<size_t>& r) const
+    {
+        for (auto i = r.begin(); i != r.end(); ++i)
+        {
+            handle_wall_collision((*balls)[i]);
+            tbb::parallel_for(tbb::blocked_range<size_t>(i, balls->size()), TbbBallBallCollision(i, balls));
+        }
+    }
+};
 
 void handle_collisions(std::vector<BallState>& balls)
 {
-    for (int i = 0; i < balls.size(); ++i)
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, balls.size()), TbbWallCollision(&balls));
+}
+
+class TbbUpdateBall
+{
+private:
+    std::vector<BallState>* balls;
+    double deltaT;
+
+public:
+    TbbUpdateBall(std::vector<BallState>* balls, double deltaT)
     {
-        handle_wall_collision(balls[i]);
+        this->balls = balls;
+        this->deltaT = deltaT;
+    }
 
-        for(int j = i + 1; j < balls.size(); j++)
+    void operator() (const tbb::blocked_range<size_t>& r) const
+    {
+        for (auto i = r.begin(); i != r.end(); ++i)
         {
-            /*if ((balls[i].Position.x + balls[i].Radius) < (balls[j].Position.x - balls[j].Radius))
-            {
-                std::cout << "break" << std::endl;
-                break;
-            }*/
-
-
-            /*if((balls[i].Position.y + balls[i].Radius) < (balls[j].Position.y - balls[j].Radius) ||
-               (balls[j].Position.y + balls[j].Radius) < (balls[i].Position.y - balls[i].Radius))
-            {
-                std::cout << "continue" << std::endl;
-                continue;
-            }*/
-
-
-            handle_ball_ball_collision(balls[i], balls[j]);
+            update_ball(balls->at(i), this->deltaT);
         }
     }
-}
+};
 
 void update_balls(std::vector<BallState>& balls, double deltaT)
 {
     // Update positions
-    std::vector<std::thread> threads;
-    for (BallState& state : balls)
-    {
-        std::thread t ([&state, deltaT](){update_ball(state, deltaT);});
-        threads.push_back(std::move(t));
-    }
-
-    for (std::thread& t : threads)
-    {
-        t.join();
-    }
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, balls.size()), TbbUpdateBall(&balls, deltaT));
 
     // Handle collisions
     handle_collisions(balls);
