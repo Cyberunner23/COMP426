@@ -140,7 +140,7 @@ std::vector<BallState> initialize_balls(int argc, char** argv)
     return balls;
 }
 
-void update_ball(BallState& b, double deltaT)
+__device__ void update_ball(BallState& b, double deltaT)
 {
     // Update velocity
     b.Velocity.y += gravity * deltaT;
@@ -150,9 +150,9 @@ void update_ball(BallState& b, double deltaT)
     b.Position.y += b.Velocity.y * deltaT;
 
     // Ensure its still on screen
-    b.Position.x = std::min(b.Position.x, (float)WinSize - b.Radius);
-    b.Position.x = std::max(b.Position.x, (float)b.Radius);
+    b.Position.x = b.Position.x < (float)WinSize - b.Radius ? b.Position.x : (float)WinSize - b.Radius;
+    b.Position.x = b.Position.x > (float)b.Radius ? b.Position.x : (float)b.Radius;
 
-    b.Position.y = std::min(b.Position.y, (float)WinSize - b.Radius);
-    b.Position.y = std::max(b.Position.y, (float)b.Radius);
+    b.Position.y = b.Position.y < (float)WinSize - b.Radius ? b.Position.y : (float)WinSize - b.Radius;
+    b.Position.y = b.Position.y > (float)b.Radius ? b.Position.y : (float)b.Radius;
 }

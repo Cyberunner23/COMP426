@@ -11,13 +11,9 @@ The main thread then goes into the main loop.
 It starts by doing frame limiting that is done by comparing the frame start times between the current frame and the previous frame.
 The main thread then sleep until the total frame time elapsed is 1/30 of a second.
 
-The main thread then does the updating using a tbb parallel_for.
-The class used for this parallel for is named TbbUpdateBall.
+The main thread then does the updating using CUDA with 1 block and a thread per ball.
 
-The main thread then does the collision handling. This handling is done in a nested for loop in which each nesting level is done with a parallel_for.
-The outer for loop does the wall collision, then calls the tbb parallel_for to do the ball ball collision with the rest of the elements in the vector.
-The class used for the outer loop is named TbbWallCollision.
-The class used for the inner loop is named TbbBallBallCollision.
+The main thread then does the collision handling.
 The actual collision calculation uses elastic collision formulas.
 
 After that it renders the balls based on their position and color.

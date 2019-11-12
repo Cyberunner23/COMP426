@@ -3,8 +3,6 @@
 #include <thread>
 #include <vector>
 
-#include "tbb/tbb.h"
-
 #include "BallUtils.hpp"
 #include "GLUtils.hpp"
 
@@ -118,87 +116,24 @@ void handle_ball_ball_collision(BallState& b1, BallState& b2)
     b2.Velocity = b2.Velocity - (impulse * im2);
 }
 
-
-
-class TbbBallBallCollision
-{
-private:
-    unsigned int current;
-    std::vector<BallState>* balls;
-
-public:
-    TbbBallBallCollision(unsigned int current, std::vector<BallState>* balls)
-    {
-        this->current = current;
-        this->balls = balls;
-    }
-
-    void operator() (const tbb::blocked_range<size_t>& r) const
-    {
-        for (auto i = r.begin(); i != r.end(); ++i)
-        {
-            handle_ball_ball_collision((*balls)[current], (*balls)[i]);
-        }
-    }
-};
-
-class TbbWallCollision
-{
-private:
-    std::vector<BallState>* balls;
-
-public:
-    TbbWallCollision(std::vector<BallState>* balls)
-    {
-        this->balls = balls;
-    }
-
-    void operator() (const tbb::blocked_range<size_t>& r) const
-    {
-        for (auto i = r.begin(); i != r.end(); ++i)
-        {
-            handle_wall_collision((*balls)[i]);
-            tbb::parallel_for(tbb::blocked_range<size_t>(i, balls->size()), TbbBallBallCollision(i, balls));
-        }
-    }
-};
-
 void handle_collisions(std::vector<BallState>& balls)
 {
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, balls.size()), TbbWallCollision(&balls));
-}
-
-class TbbUpdateBall
-{
-private:
-    std::vector<BallState>* balls;
-    double deltaT;
-
-public:
-    TbbUpdateBall(std::vector<BallState>* balls, double deltaT)
+    for (int i = 0; i < balls.size(); ++i)
     {
-        this->balls = balls;
-        this->deltaT = deltaT;
-    }
+        handle_wall_collision(balls[i]);
 
-    void operator() (const tbb::blocked_range<size_t>& r) const
-    {
-        for (auto i = r.begin(); i != r.end(); ++i)
+        for(int j = i + 1; j < balls.size(); j++)
         {
-            update_ball(balls->at(i), this->deltaT);
+            handle_ball_ball_collision(balls[i], balls[j]);
         }
     }
-};
-
-void update_balls(std::vector<BallState>& balls, double deltaT)
-{
-    // Update positions
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, balls.size()), TbbUpdateBall(&balls, deltaT));
-
-    // Handle collisions
-    handle_collisions(balls);
 }
 
+__global__ void update_ball_position(BallState* balls, double deltaT)
+{
+    auto id = threadIdx.x;
+    update_ball(balls[id], deltaT);
+}
 
 int main(int argc, char **argv)
 {
@@ -221,7 +156,14 @@ int main(int argc, char **argv)
 
     glfwMakeContextCurrent(window);
 
+    // Host
     std::vector<BallState> balls = initialize_balls(argc, argv);
+    auto count = balls.size();
+    auto memorySize = count * sizeof(BallState);
+    // Device
+    std::cout << memorySize << std::endl;
+    BallState* deviceBalls;
+    cudaMalloc(&deviceBalls, memorySize);
 
     double lastFrameStartTime = glfwGetTime();
     while(!glfwWindowShouldClose(window))
@@ -232,8 +174,15 @@ int main(int argc, char **argv)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        std::cout << 1 / deltaT << std::endl;
-        update_balls(balls, deltaT);
+        // CopyHost to GPU
+        cudaMemcpy(deviceBalls, balls.data(), memorySize, cudaMemcpyHostToDevice);
+
+        int blockSize = count;
+        int gridSize = 1;
+        update_ball_position<<<gridSize, blockSize>>>(deviceBalls, deltaT);
+        cudaMemcpy(balls.data(), deviceBalls, memorySize, cudaMemcpyDeviceToHost);
+
+        handle_collisions(balls);
 
         display_background();
         display_circles(balls);
@@ -241,5 +190,8 @@ int main(int argc, char **argv)
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    cudaFree(deviceBalls);
+
     return 0;
 }

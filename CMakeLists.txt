@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.8)
 
 
 #------------------------------------------------------------------------------
@@ -11,9 +11,10 @@ HunterGate(
     SHA1 "e14bc153a7f16d6a5eeec845fb0283c8fad8c358"
 )
 
-project(COMP426)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+project(COMP426 LANGUAGES CUDA CXX)
+
+set(CMAKE_CUDA_STANDARD 11)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 hunter_add_package(glfw)
 find_package(glfw3 CONFIG REQUIRED)
@@ -28,19 +29,17 @@ find_package(glm REQUIRED)
 
 find_package(OpenGL REQUIRED)
 
-add_subdirectory(3rdparty/tbb)
-
 
 #------------------------------------------------------------------------------
 # Main files
 #------------------------------------------------------------------------------
 
 set(SRCS
-		src/main.cpp
+	src/main.cu
 )
 
 set(HEADERS
-		src/GLUtils.hpp src/BallUtils.hpp)
+	src/GLUtils.hpp src/BallUtils.hpp)
 
 
 #------------------------------------------------------------------------------
@@ -48,9 +47,11 @@ set(HEADERS
 #------------------------------------------------------------------------------
 
 add_executable(${PROJECT_NAME} ${SRCS} ${HEADERS})
+
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
 target_link_libraries(${PROJECT_NAME}
 	glfw
 	glm
-	tbb
 )
 
