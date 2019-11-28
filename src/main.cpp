@@ -5,6 +5,7 @@
 
 #include "BallUtils.hpp"
 #include "GLUtils.hpp"
+#include "CLUtils.hpp"
 
 //*********************************************************
 // Constants
@@ -49,6 +50,7 @@ void display_background()
     }
 }
 
+/*
 void display_circles(std::vector<BallState> balls)
 {
     for (BallState ball : balls)
@@ -128,12 +130,30 @@ void handle_collisions(std::vector<BallState>& balls)
         }
     }
 }
+*/
 
-__global__ void update_ball_position(BallState* balls, double deltaT)
-{
-    auto id = threadIdx.x;
-    update_ball(balls[id], deltaT);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 int main(int argc, char **argv)
 {
@@ -157,13 +177,11 @@ int main(int argc, char **argv)
     glfwMakeContextCurrent(window);
 
     // Host
-    std::vector<BallState> balls = initialize_balls(argc, argv);
-    auto count = balls.size();
-    auto memorySize = count * sizeof(BallState);
-    // Device
-    std::cout << memorySize << std::endl;
-    BallState* deviceBalls;
-    cudaMalloc(&deviceBalls, memorySize);
+    int count = 0;
+    BallState balls = initialize_balls(argc, argv, count);
+
+
+
 
     double lastFrameStartTime = glfwGetTime();
     while(!glfwWindowShouldClose(window))
@@ -174,24 +192,19 @@ int main(int argc, char **argv)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // CopyHost to GPU
-        cudaMemcpy(deviceBalls, balls.data(), memorySize, cudaMemcpyHostToDevice);
 
         int blockSize = count;
         int gridSize = 1;
-        update_ball_position<<<gridSize, blockSize>>>(deviceBalls, deltaT);
-        cudaMemcpy(balls.data(), deviceBalls, memorySize, cudaMemcpyDeviceToHost);
+        //update_ball_position<<<gridSize, blockSize>>>(deviceBalls, deltaT);
 
-        handle_collisions(balls);
+        //handle_collisions(balls);
 
         display_background();
-        display_circles(balls);
+        //display_circles(balls);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    cudaFree(deviceBalls);
 
     return 0;
 }

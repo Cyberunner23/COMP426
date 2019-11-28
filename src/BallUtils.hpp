@@ -9,34 +9,36 @@
 
 #include "GLUtils.hpp"
 
+#include "CL/cl.h"
+
 const float gravity = 0.3f * 5000; // 9.8m/s^2 * 5000px/m
 
 // position, velocity and radius in pixels
 struct BallState
 {
-    float Mass;
-    unsigned int Radius;
-    glm::vec2 Position;
-    glm::vec2 Velocity;
-    glm::vec3 Color;
+    cl_float* Mass;
+    cl_uint* Radius;
+    cl_float2* Position;
+    cl_float2* Velocity;
+    glm::vec3* Color;
 };
 
-bool collides(BallState b1, BallState b2)
+bool collides(BallState& balls, int index1, int index2)
 {
-    float dx = b1.Position.x - b2.Position.x;
-    float dy = b1.Position.y - b2.Position.y;
-    unsigned int rSum = b1.Radius + b2.Radius;
+    float dx = balls.Position[index1].x - balls.Position[index2].x;
+    float dy = balls.Position[index1].y - balls.Position[index2].y;
+    unsigned int rSum = balls.Radius[index1] + balls.Radius[index2];
     return (unsigned int)fabs(dx*dx + dy*dy) <= rSum*rSum;
 }
 
-bool collides_with_edge_x(BallState& b)
+bool collides_with_edge_x(BallState& balls, int index)
 {
-     return (unsigned int)b.Position.x - b.Radius <= 0 || (unsigned int)b.Position.x + b.Radius >= WinSize;
+     return (unsigned int)balls.Position[index].x - balls.Radius[index] <= 0 || (unsigned int)balls.Position[index].x + balls.Radius[index] >= WinSize;
 }
 
-bool collides_with_edge_y(BallState& b)
+bool collides_with_edge_y(BallState& balls, int index)
 {
-    return (unsigned int)b.Position.y - b.Radius <= 0 || (unsigned int)b.Position.y + b.Radius >= WinSize;
+    return (unsigned int)balls.Position[index].y - balls.Radius[index] <= 0 || (unsigned int)balls.Position[index].y + balls.Radius[index] >= WinSize;
 }
 
 int rand_range(int min, int max)
@@ -47,15 +49,15 @@ int rand_range(int min, int max)
     return distrib(gen);
 }
 
-BallState create_random_ball()
+void create_random_ball(BallState& state, unsigned int index)
 {
-    unsigned int radius = rand_range(1, 3) * 50;
+    cl_uint radius = rand_range(1, 3) * 50;
     float mass = 0.5;
-    int posX = rand_range(radius, WinSize - radius);
-    int posY = rand_range(radius, WinSize - radius);
+    cl_float posX = rand_range(radius, WinSize - radius);
+    cl_float posY = rand_range(radius, WinSize - radius);
 
-    int velY = rand_range(5, 15);
-    int velX = rand_range(100, 200);
+    cl_float velY = rand_range(5, 15);
+    cl_float velX = rand_range(100, 200);
     velX = (int) rand_range(0, 1) ? velX : -velX;
     velY = (int) rand_range(0, 1) ? velY : -velY;
 
@@ -79,10 +81,14 @@ BallState create_random_ball()
             break;
     }
 
-    return BallState { mass, radius, glm::vec2 {posX, posY}, glm::vec2{velX, velY}, color };
+    state.Mass[index] = mass;
+    state.Radius[index] = radius;
+    state.Position[index] = cl_float2 {posX, posY};
+    state.Velocity[index] = cl_float2 {velX, velY};
+    state.Color[index] = color;
 }
 
-std::vector<BallState> initialize_balls(int argc, char** argv)
+BallState initialize_balls(int argc, char** argv, int& count)
 {
     if (argc != 2)
     {
@@ -109,16 +115,24 @@ std::vector<BallState> initialize_balls(int argc, char** argv)
 
     std::cout << "Creating " << val << " balls." << std::endl;
 
-    std::vector<BallState> balls;
+    count = val;
+
+    BallState balls{};
+    balls.Mass = new cl_float[val];
+    balls.Radius = new cl_uint[val];
+    balls.Position = new cl_float2[val];
+    balls.Velocity = new cl_float2[val];
+    balls.Color = new glm::vec3[val];
+
 
     for (int i = 0; i < val; ++i)
     {
-        BallState ball = create_random_ball();
+        create_random_ball(balls, i);
 
         bool collisionFound = false;
-        for (BallState ballState : balls)
+        for (int j = 0; j < i - 1; ++j)
         {
-            if (collides(ballState, ball))
+            if (collides(balls, i, j))
             {
                 collisionFound = true;
             }
@@ -130,17 +144,16 @@ std::vector<BallState> initialize_balls(int argc, char** argv)
             continue;
         }
 
-        balls.push_back(ball);
-        std::cout << "Created ball: Radius = " << ball.Radius
-                  << "  Pos = (" << ball.Position.x << ", " << ball.Position.y
-                  << ") Velocity = (" << ball.Velocity.x << ", " << ball.Velocity.y
-                  << ") Color = (" << ball.Color.x << ", " << ball.Color.y << ", " << ball.Color.z << ")" << std::endl;
+        std::cout << "Created ball: Radius = " << balls.Radius[i]
+                  << "  Pos = (" << balls.Position[i].x << ", " << balls.Position[i].y
+                  << ") Velocity = (" << balls.Velocity[i].x << ", " << balls.Velocity[i].y
+                  << ") Color = (" << balls.Color[i].x << ", " << balls.Color[i].y << ", " << balls.Color[i].z << ")" << std::endl;
     }
 
     return balls;
 }
 
-__device__ void update_ball(BallState& b, double deltaT)
+/*void update_ball(BallState& b, double deltaT)
 {
     // Update velocity
     b.Velocity.y += gravity * deltaT;
@@ -155,4 +168,4 @@ __device__ void update_ball(BallState& b, double deltaT)
 
     b.Position.y = b.Position.y < (float)WinSize - b.Radius ? b.Position.y : (float)WinSize - b.Radius;
     b.Position.y = b.Position.y > (float)b.Radius ? b.Position.y : (float)b.Radius;
-}
+}*/

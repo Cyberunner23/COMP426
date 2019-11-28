@@ -11,7 +11,7 @@ HunterGate(
     SHA1 "e14bc153a7f16d6a5eeec845fb0283c8fad8c358"
 )
 
-project(COMP426 LANGUAGES CUDA CXX)
+project(COMP426 LANGUAGES CXX)
 
 set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
@@ -28,6 +28,8 @@ find_package(glm REQUIRED)
 #------------------------------------------------------------------------------
 
 find_package(OpenGL REQUIRED)
+find_package(OpenCL REQUIRED)
+include_directories(${OPENCL_INCLUDE_DIRS})
 
 
 #------------------------------------------------------------------------------
@@ -35,11 +37,11 @@ find_package(OpenGL REQUIRED)
 #------------------------------------------------------------------------------
 
 set(SRCS
-	src/main.cu
+	src/main.cpp
 )
 
 set(HEADERS
-	src/GLUtils.hpp src/BallUtils.hpp)
+	src/GLUtils.hpp src/BallUtils.hpp src/CLUtils.hpp)
 
 
 #------------------------------------------------------------------------------
@@ -48,9 +50,8 @@ set(HEADERS
 
 add_executable(${PROJECT_NAME} ${SRCS} ${HEADERS})
 
-set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
 target_link_libraries(${PROJECT_NAME}
+	${OPENCL_LIBRARIES}
 	glfw
 	glm
 )
