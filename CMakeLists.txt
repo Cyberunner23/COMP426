@@ -6,15 +6,14 @@ cmake_minimum_required(VERSION 3.8)
 #------------------------------------------------------------------------------
 include("cmake/HunterGate.cmake")
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 HunterGate(
     URL "https://github.com/ruslo/hunter/archive/v0.23.214.tar.gz"
     SHA1 "e14bc153a7f16d6a5eeec845fb0283c8fad8c358"
 )
 
 project(COMP426 LANGUAGES CXX)
-
-set(CMAKE_CUDA_STANDARD 11)
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 hunter_add_package(glfw)
 find_package(glfw3 CONFIG REQUIRED)
@@ -40,9 +39,11 @@ set(SRCS
 	src/main.cpp
 )
 
-set(HEADERS
-	src/GLUtils.hpp src/BallUtils.hpp src/CLUtils.hpp)
+#set(HEADERS
+	#src/GLUtils.hpp src/BallUtils.hpp src/CLUtils.hpp)
 
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/BallLogic.cl ${CMAKE_CURRENT_BINARY_DIR}/BallLogic.cl COPYONLY)
 
 #------------------------------------------------------------------------------
 # Executable

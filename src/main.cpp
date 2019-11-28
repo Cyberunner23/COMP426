@@ -50,109 +50,14 @@ void display_background()
     }
 }
 
-/*
-void display_circles(std::vector<BallState> balls)
+
+void display_circles(BallState& state)
 {
-    for (BallState ball : balls)
+    for (auto i = 0; i < state.Count; ++i)
     {
-        DrawCircle(ball.Position, ball.Color, ball.Radius);
+        DrawCircle(glm::vec2 {state.Position[i].x, state.Position[i].y}, state.Color[i], state.Radius[i]);
     }
 }
-
-void handle_wall_collision(BallState& ball)
-{
-    if (collides_with_edge_x(ball))
-    {
-        float vX = ball.Velocity.x;
-        ball.Velocity.x = -vX;
-    }
-
-    if (collides_with_edge_y(ball))
-    {
-        float vY = ball.Velocity.y;
-        ball.Velocity.y = -vY;
-    }
-}
-
-void handle_ball_ball_collision(BallState& b1, BallState& b2)
-{
-
-    glm::vec2 delta = b1.Position - b2.Position;
-    float r = (float)b1.Radius + (float)b2.Radius;
-    float dist2 = glm::dot(delta, delta);
-
-    if (dist2 >= r * r)
-    {
-        return;
-    }
-
-    float d = glm::length(delta);
-
-    glm::vec2 mtd;
-    if (d != 0.0f)
-    {
-        mtd = delta * ((((float)b1.Radius + (float)b2.Radius) - d)/d);
-    }
-    else
-    {
-        d = (float)b1.Radius +  (float)b2.Radius - 1.0f;
-        delta = glm::vec2 {b1.Radius + b2.Radius, 0.0f};
-        mtd = delta * ((((float)b1.Radius + (float)b2.Radius) - d)/d);
-    }
-
-    float im1 = 1 / b1.Mass; // inverse mass quantities
-    float im2 = 1 / b2.Mass;
-
-    b1.Position = b1.Position + (mtd * (im1 / (im1 + im2)));
-    b2.Position = b2.Position - (mtd * (im1 / (im1 + im2)));
-
-    glm::vec2 v = (b1.Velocity - b2.Velocity);
-    float vn = glm::dot(v, glm::normalize(mtd));
-
-    if (vn > 0.0f) return;
-
-    float i = (-(1.0f + 0.85f) * vn) / (im1 + im2);
-    glm::vec2 impulse = mtd * i * 0.001f;
-
-    b1.Velocity = b1.Velocity + (impulse * im1);
-    b2.Velocity = b2.Velocity - (impulse * im2);
-}
-
-void handle_collisions(std::vector<BallState>& balls)
-{
-    for (int i = 0; i < balls.size(); ++i)
-    {
-        handle_wall_collision(balls[i]);
-
-        for(int j = i + 1; j < balls.size(); j++)
-        {
-            handle_ball_ball_collision(balls[i], balls[j]);
-        }
-    }
-}
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 int main(int argc, char **argv)
@@ -178,8 +83,32 @@ int main(int argc, char **argv)
 
     // Host
     int count = 0;
-    BallState balls = initialize_balls(argc, argv, count);
+    BallState state = initialize_balls(argc, argv, count);
 
+    CLBallState clBallState{};
+    CLState clState{};
+    if (InitOpenCL(state, clBallState, clState))
+    {
+        std::cout << "INIT OPENCL FAILED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
+        return -1;
+    }
+    else
+    {
+        std::cout << "INIT OPENCL SUCCESS" << std::endl;
+    }
+
+    cl_uint winSize = (cl_uint)WinSize;
+    if (!SetBallUpdateKernelParamsInit(clBallState, clState, gravity, winSize))
+    {
+        std::cerr << "SetBallUpdateKernelParamsInit failed!" << std::endl;
+        return -1;
+    }
+
+    if (!SetBallCollisionKernelParamsInit(clBallState, clState, winSize))
+    {
+        std::cerr << "SetBallCollisionKernelParamsInit failed!" << std::endl;
+        return -1;
+    }
 
 
 
@@ -187,6 +116,11 @@ int main(int argc, char **argv)
     while(!glfwWindowShouldClose(window))
     {
         double deltaT = do_frame_rate_limiting(lastFrameStartTime);
+        if (!BallUpdateBufferUpdate(clState, clBallState, (float)deltaT))
+        {
+            std::cerr << "Failed to update delaT!!!" << std::endl;
+            return -1;
+        }
 
         glClear(GL_COLOR_BUFFER_BIT);
         glEnable(GL_BLEND);
@@ -195,12 +129,23 @@ int main(int argc, char **argv)
 
         int blockSize = count;
         int gridSize = 1;
-        //update_ball_position<<<gridSize, blockSize>>>(deviceBalls, deltaT);
 
+        //update_ball_position<<<gridSize, blockSize>>>(deviceBalls, deltaT);
         //handle_collisions(balls);
+        if (!RunKernels(clState, clBallState))
+        {
+            std::cerr << "Failed to run kernels!!" << std::endl;
+            return -1;
+        }
+
+        if(!ReadPositionBuffer(state, clBallState, clState))
+        {
+            std::cerr << "Failed to read buffer data!!!" << std::endl;
+            return -1;
+        }
 
         display_background();
-        //display_circles(balls);
+        display_circles(state);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

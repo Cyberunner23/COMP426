@@ -11,7 +11,7 @@
 
 #include "CL/cl.h"
 
-const float gravity = 0.3f * 5000; // 9.8m/s^2 * 5000px/m
+float gravity = 0.3f * 5000; // 9.8m/s^2 * 5000px/m
 
 // position, velocity and radius in pixels
 struct BallState
@@ -21,6 +21,7 @@ struct BallState
     cl_float2* Position;
     cl_float2* Velocity;
     glm::vec3* Color;
+    int Count;
 };
 
 bool collides(BallState& balls, int index1, int index2)
@@ -29,16 +30,6 @@ bool collides(BallState& balls, int index1, int index2)
     float dy = balls.Position[index1].y - balls.Position[index2].y;
     unsigned int rSum = balls.Radius[index1] + balls.Radius[index2];
     return (unsigned int)fabs(dx*dx + dy*dy) <= rSum*rSum;
-}
-
-bool collides_with_edge_x(BallState& balls, int index)
-{
-     return (unsigned int)balls.Position[index].x - balls.Radius[index] <= 0 || (unsigned int)balls.Position[index].x + balls.Radius[index] >= WinSize;
-}
-
-bool collides_with_edge_y(BallState& balls, int index)
-{
-    return (unsigned int)balls.Position[index].y - balls.Radius[index] <= 0 || (unsigned int)balls.Position[index].y + balls.Radius[index] >= WinSize;
 }
 
 int rand_range(int min, int max)
@@ -123,6 +114,7 @@ BallState initialize_balls(int argc, char** argv, int& count)
     balls.Position = new cl_float2[val];
     balls.Velocity = new cl_float2[val];
     balls.Color = new glm::vec3[val];
+    balls.Count = val;
 
 
     for (int i = 0; i < val; ++i)
