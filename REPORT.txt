@@ -6,17 +6,18 @@ This project uses GLFW instead of GLUT as the library since I am more comfortabl
 The main thread starts by creating the window. It then initializes a certain amount of balls defined by the command like argument.
 The balls are created with random position, velocity, mass and color.
 When the ball is created, there is a check to see if it collides with any other ball, if it is the case, a new random ball is generated until no collision is detected.
+The CLState as well as the CLBallState objects are initialized, those are objects coming from the CLUtils.hpp file, described later.
+The kernel parameters are then set.
 
 The main thread then goes into the main loop.
 It starts by doing frame limiting that is done by comparing the frame start times between the current frame and the previous frame.
 The main thread then sleep until the total frame time elapsed is 1/30 of a second.
 
-The main thread then does the updating using CUDA with 1 block and a thread per ball.
+The main thread then updates the OpenCL buffer containing the value for the delta time.
 
-The main thread then does the collision handling.
-The actual collision calculation uses elastic collision formulas.
+The main thread then runs the kernels, which are composed of an update position kernel as well as a collision handling kernel.
 
-After that it renders the balls based on their position and color.
+The main thread then reads the position buffer and uses the info to render the balls in the current position.
 
 A note on the additional files.
 
@@ -25,5 +26,37 @@ GLUtils.hpp:
   These functions could have been put in the main file but I put them there for cleanliness.
 
 BallUtils.hpp:
-  This file contains utilities I created for the balls themselves. \
+  This file contains utilities I created for the balls themselves.
   It contains the data representing the ball, ball collision detection, ball generation as well as the update function used in the threads.
+
+CLUtils.hpp:
+  This file contains utilities I created for using OpenCL.
+  It contains the states used, one for the OpenCL states, including context, command queue, the program and the kernels.
+  In addition there is the CLBallState which contains all references to the OpenCL memory.
+  The functions contained in this file includes everything needed to interface with OpenCL from initialization to reading and writing to the buffers.
+  The Initialization works by creating a context, creating a command queue, loading the program, creating the kernel handles and creating as well as populating the various openCL buffers.
+
+BallLogic.cl:
+  This file contains all the code executed by the kernels. The code in here is transpiled from the ball update and collision logic used previously.
+
+QUESTIONS:
+1)
+  All kernels are run on the GPU as no task parallelism was really present in this case.
+  The main thread (CPU) does all the OpenCL setup as well as the rendering, the position calculation and the collision logic all happen in the kernels.
+  There are 3 data movements.
+    The first is during initialization when the OpenCL buffers are filled with the initial ball data.
+    The next one is every frame, the delta time is written into the delta time buffer, this value is used in position update computation.
+    The last one is every frame, the positions are read from the position buffer and is used for rendering the balls.
+  Here data movement is minimized by doing the majority of the data transfer during initialization. Minimal data transfer is done during the frame.
+
+2)
+  The update position kernel runs for every ball. It modifies the data in the buffer, which is later read by the host and used for ball rendering.
+  The collision kernel also runs for every ball. It modifies the data in the buffer, which is used by the next execution of the update position kernel.
+
+3)
+  The host program guarantees correctness by never overwriting the OpenCL buffers other than the delta time buffer.
+  This ensures that the buffer data is only modified by the kernels which prevents the host from introducing corruption.
+  Every frame, only the position buffer is read, reducing overall transfers compared to writing and reading data for every stage of the computation.
+  The majority of the data is copied to the device once, there is no major data transfer from device to host. This ensures relatively high performance.
+
+

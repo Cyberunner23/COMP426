@@ -270,18 +270,29 @@ bool SetBallUpdateKernelParamsInit(CLBallState& clBallState, CLState& clState, c
     return errCode == CL_SUCCESS;
 }
 
-bool BallUpdateBufferUpdate(CLState& clState, CLBallState& clBallState, float deltaT)
+bool BallUpdateBufferUpdate(CLState& clState, CLBallState& clBallState, float& deltaT)
+{
+    cl_event readEvent;
+
+    if(clEnqueueWriteBuffer(clState.CommandQueue, clBallState.DeltaTBuf, CL_TRUE, 0, sizeof(cl_float), (cl_float*)&deltaT, 0, nullptr, &readEvent) != CL_SUCCESS)
+    {
+        return false;
+    }
+
+    return clWaitForEvents(1, &readEvent) == CL_SUCCESS;
+}
+
+bool BallUpdateBufferRead(CLState& clState, CLBallState& clBallState, float& deltaT)
 {
     cl_event writeEvent;
 
-    if (clEnqueueWriteBuffer(clState.CommandQueue, clBallState.DeltaTBuf, CL_TRUE, 0, sizeof(cl_float), (void *)&deltaT, 0, NULL, &writeEvent) != CL_SUCCESS)
+    if (clEnqueueReadBuffer(clState.CommandQueue, clBallState.DeltaTBuf, CL_TRUE, 0, sizeof(cl_float), (void *)&deltaT, 0, NULL, &writeEvent) != CL_SUCCESS)
     {
         return false;
     }
 
     return clWaitForEvents(1, &writeEvent) == CL_SUCCESS;
 }
-
 
 bool SetBallCollisionKernelParamsInit(CLBallState& clBallState, CLState& clState, cl_uint& WinSize)
 {
@@ -309,7 +320,7 @@ bool ReadPositionBuffer(BallState& ballState, CLBallState& clBallState, CLState&
 {
     cl_event readEvent;
 
-    if(clEnqueueReadBuffer(clState.CommandQueue, clBallState.PositionBuf, CL_TRUE, 0, clBallState.Count * sizeof(cl_float2), ballState.Velocity, 0, nullptr, &readEvent) != CL_SUCCESS)
+    if(clEnqueueReadBuffer(clState.CommandQueue, clBallState.PositionBuf, CL_TRUE, 0, clBallState.Count * sizeof(cl_float2), ballState.Position, 0, nullptr, &readEvent) != CL_SUCCESS)
     {
         return false;
     }

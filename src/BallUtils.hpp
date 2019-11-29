@@ -144,20 +144,3 @@ BallState initialize_balls(int argc, char** argv, int& count)
 
     return balls;
 }
-
-/*void update_ball(BallState& b, double deltaT)
-{
-    // Update velocity
-    b.Velocity.y += gravity * deltaT;
-
-    // Update Position
-    b.Position.x += b.Velocity.x * deltaT;
-    b.Position.y += b.Velocity.y * deltaT;
-
-    // Ensure its still on screen
-    b.Position.x = b.Position.x < (float)WinSize - b.Radius ? b.Position.x : (float)WinSize - b.Radius;
-    b.Position.x = b.Position.x > (float)b.Radius ? b.Position.x : (float)b.Radius;
-
-    b.Position.y = b.Position.y < (float)WinSize - b.Radius ? b.Position.y : (float)WinSize - b.Radius;
-    b.Position.y = b.Position.y > (float)b.Radius ? b.Position.y : (float)b.Radius;
-}*/

@@ -1,7 +1,6 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
-#include <vector>
 
 #include "BallUtils.hpp"
 #include "GLUtils.hpp"
@@ -115,8 +114,8 @@ int main(int argc, char **argv)
     double lastFrameStartTime = glfwGetTime();
     while(!glfwWindowShouldClose(window))
     {
-        double deltaT = do_frame_rate_limiting(lastFrameStartTime);
-        if (!BallUpdateBufferUpdate(clState, clBallState, (float)deltaT))
+        float deltaT = (float)do_frame_rate_limiting(lastFrameStartTime);
+        if (!BallUpdateBufferUpdate(clState, clBallState, deltaT))
         {
             std::cerr << "Failed to update delaT!!!" << std::endl;
             return -1;
@@ -126,12 +125,6 @@ int main(int argc, char **argv)
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-
-        int blockSize = count;
-        int gridSize = 1;
-
-        //update_ball_position<<<gridSize, blockSize>>>(deviceBalls, deltaT);
-        //handle_collisions(balls);
         if (!RunKernels(clState, clBallState))
         {
             std::cerr << "Failed to run kernels!!" << std::endl;
